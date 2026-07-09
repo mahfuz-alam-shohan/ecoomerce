@@ -1,7 +1,6 @@
 name = "ecom"
 compatibility_date = "2024-03-20"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
 
 # R2 Bucket Binding (This connects Next.js directly to the bucket we created)
 [[r2_buckets]]
