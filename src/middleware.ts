@@ -100,8 +100,21 @@ function resolveRoutingContext(
   fullHost: string
 ): { type: 'dashboard' | 'storefront' | 'platform'; slug?: string } {
   // Local development: single segment "localhost" → platform
-  if (hostParts.length <= 1 || fullHost === 'localhost') {
+  if (hostParts.length <= 1 || fullHost === 'localhost' || fullHost.includes('127.0.0.1')) {
     return { type: 'platform' };
+  }
+
+  // Cloudflare Pages or Vercel default preview domain (e.g., ecoomerce-285.pages.dev) → Platform
+  if (fullHost.endsWith('.pages.dev') || fullHost.endsWith('.vercel.app')) {
+    // If it's just the root preview URL (3 parts like ecoomerce-285.pages.dev), treat as platform
+    if (hostParts.length <= 3) {
+      return { type: 'platform' };
+    }
+    // If it has a subdomain on top of the preview URL (e.g., tenant.ecoomerce-285.pages.dev)
+    const subdomain = hostParts[0];
+    if (subdomain === 'app' || subdomain === 'dashboard') return { type: 'dashboard' };
+    if (RESERVED_SUBDOMAINS.has(subdomain)) return { type: 'platform' };
+    return { type: 'storefront', slug: subdomain };
   }
 
   const subdomain = hostParts[0];
