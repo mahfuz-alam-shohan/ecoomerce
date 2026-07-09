@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest } from 'next/server';
 import { requireRole, requireTenantAccess, AuthError } from '@/lib/auth/guards';
 import { findProductsByTenant, countProductsByTenant, insertProduct } from '@/modules/catalog/repositories';

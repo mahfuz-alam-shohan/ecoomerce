@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest } from 'next/server';
 import { findProductsByTenant, findProductByHandle } from '@/modules/catalog/repositories';
 import { findVariantsByProduct } from '@/modules/catalog/repositories';

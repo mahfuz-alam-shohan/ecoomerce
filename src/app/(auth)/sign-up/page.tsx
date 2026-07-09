@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import type { Metadata } from 'next';
 import { SignUpForm } from '@/components/features/auth/sign-up-form';
 

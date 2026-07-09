@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { redirect } from 'next/navigation';
 import { requireRole } from '@/lib/auth/guards';
 import { PlatformSidebar } from '@/components/layout/platform-sidebar';

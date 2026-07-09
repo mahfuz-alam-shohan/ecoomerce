@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest } from 'next/server';
 import { requireTenantAccess, AuthError } from '@/lib/auth/guards';
 import { generateVariants } from '@/modules/catalog/use-cases';

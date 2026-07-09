@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import type {
   IPaymentGateway,
   PaymentCheckoutPayload,
@@ -21,7 +20,7 @@ export class ManualPaymentAdapter implements IPaymentGateway {
   readonly displayName = 'Manual Payment (COD / Bank Transfer)';
 
   async createCheckoutSession(payload: PaymentCheckoutPayload): Promise<PaymentCheckoutResult> {
-    const transactionId = randomUUID();
+    const transactionId = crypto.randomUUID();
 
     return {
       transactionId,
@@ -56,7 +55,7 @@ export class ManualPaymentAdapter implements IPaymentGateway {
   ): Promise<PaymentRefundResult> {
     // Manual refunds are tracked in the ledger; actual money movement is offline.
     return {
-      refundId: randomUUID(),
+      refundId: crypto.randomUUID(),
       amountRefundedInCents: amountInCents,
       status: 'refunded',
     };

@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import type {
   IPaymentGateway,
   PaymentCheckoutPayload,
@@ -20,7 +19,7 @@ export class SandboxPaymentAdapter implements IPaymentGateway {
   readonly displayName = 'Sandbox Payment Simulator';
 
   async createCheckoutSession(payload: PaymentCheckoutPayload): Promise<PaymentCheckoutResult> {
-    const transactionId = `sandbox_${randomUUID()}`;
+    const transactionId = `sandbox_${crypto.randomUUID()}`;
 
     // Simulate instant successful payment
     return {
@@ -50,7 +49,7 @@ export class SandboxPaymentAdapter implements IPaymentGateway {
     reason?: string
   ): Promise<PaymentRefundResult> {
     return {
-      refundId: `sandbox_refund_${randomUUID()}`,
+      refundId: `sandbox_refund_${crypto.randomUUID()}`,
       amountRefundedInCents: amountInCents,
       status: 'refunded',
     };
