@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 
 import { NextRequest } from 'next/server';
 import { resolveTenantByHost } from '@/modules/tenants/use-cases';

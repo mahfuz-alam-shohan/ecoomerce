@@ -104,10 +104,14 @@ function resolveRoutingContext(
     return { type: 'platform' };
   }
 
-  // Cloudflare Pages or Vercel default preview domain (e.g., ecoomerce-285.pages.dev) → Platform
-  if (fullHost.endsWith('.pages.dev') || fullHost.endsWith('.vercel.app')) {
-    // If it's just the root preview URL (3 parts like ecoomerce-285.pages.dev), treat as platform
-    if (hostParts.length <= 3) {
+  // Cloudflare Pages/Workers or Vercel preview domain (e.g., ecoomerce-285.pages.dev or ecom.account.workers.dev) → Platform
+  if (
+    fullHost.endsWith('.pages.dev') ||
+    fullHost.endsWith('.vercel.app') ||
+    fullHost.endsWith('.workers.dev')
+  ) {
+    // Treat root preview domain (e.g. ecom.user.workers.dev or ecoomerce-285.pages.dev) as platform
+    if (hostParts.length <= 4) {
       return { type: 'platform' };
     }
     // If it has a subdomain on top of the preview URL (e.g., tenant.ecoomerce-285.pages.dev)

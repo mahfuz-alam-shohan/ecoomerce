@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 
 import type { Metadata } from 'next';
 import { SignInForm } from '@/components/features/auth/sign-in-form';

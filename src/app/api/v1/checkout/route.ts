@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 
 import { NextRequest } from 'next/server';
 import { placeOrder } from '@/modules/checkout/use-cases';

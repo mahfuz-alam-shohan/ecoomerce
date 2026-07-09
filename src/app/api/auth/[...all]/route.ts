@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 
 import { toNextJsHandler } from 'better-auth/next-js';
 import { auth } from '@/lib/auth/server';
