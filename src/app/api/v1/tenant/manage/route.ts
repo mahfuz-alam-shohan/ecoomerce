@@ -1,14 +1,18 @@
-
 import { NextRequest } from 'next/server';
 import { requireRole, AuthError } from '@/lib/auth/guards';
 import { insertTenant, updateTenant, deleteTenant, findTenantBySlug } from '@/modules/tenants/repositories';
 import { apiCreated, apiSuccess, apiError } from '@/lib/utils';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
+import type { NewTenant, ThemeConfig, StoreConfig } from '@/lib/db/schemas';
+import { auth } from '@/lib/auth/server';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schemas';
+import { eq } from 'drizzle-orm';
 
 /**
  * Tenant Management API — Super Admin Only
  *
- * POST   /api/v1/tenant/manage   → Create a new tenant (store)
+ * POST   /api/v1/tenant/manage   → Create a new tenant (store) + optional initial owner
  * PATCH  /api/v1/tenant/manage   → Update an existing tenant
  * DELETE /api/v1/tenant/manage   → Delete a tenant
  */
@@ -19,34 +23,14 @@ const createTenantSchema = z.object({
     .string()
     .min(2, 'Slug must be at least 2 characters')
     .max(100)
-    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Slug must be lowercase alphanumeric with optional hyphens'),
+    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Slug must be URL-safe (e.g., "blue-running-shoes")'),
   customDomain: z.string().max(255).optional().nullable(),
-  status: z.enum(['active', 'suspended', 'maintenance']).optional(),
-  themeConfig: z
-    .object({
-      templateId: z.string().optional(),
-      primaryColor: z.string().optional(),
-      secondaryColor: z.string().optional(),
-      accentColor: z.string().optional(),
-      fontFamily: z.string().optional(),
-      logoUrl: z.string().optional(),
-      customCss: z.string().optional(),
-    })
-    .optional(),
-  storeConfig: z
-    .object({
-      currency: z.string().optional(),
-      taxRatePercent: z.number().optional(),
-      freeShippingThresholdCents: z.number().optional(),
-      features: z
-        .object({
-          enableCod: z.boolean().optional(),
-          enableBankTransfer: z.boolean().optional(),
-          enableSandboxPay: z.boolean().optional(),
-        })
-        .optional(),
-    })
-    .optional(),
+  status: z.enum(['active', 'suspended', 'maintenance']).default('active'),
+  themeConfig: z.custom<ThemeConfig>().optional(),
+  storeConfig: z.custom<StoreConfig>().optional(),
+  ownerEmail: z.string().email('Invalid owner email address').optional(),
+  ownerPassword: z.string().min(6, 'Owner password must be at least 6 characters').optional(),
+  ownerName: z.string().min(2, 'Owner name must be at least 2 characters').optional(),
 });
 
 const updateTenantSchema = z.object({
@@ -60,8 +44,8 @@ const updateTenantSchema = z.object({
     .optional(),
   customDomain: z.string().max(255).optional().nullable(),
   status: z.enum(['active', 'suspended', 'maintenance']).optional(),
-  themeConfig: z.any().optional(),
-  storeConfig: z.any().optional(),
+  themeConfig: z.custom<ThemeConfig>().optional(),
+  storeConfig: z.custom<StoreConfig>().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -70,19 +54,54 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validated = createTenantSchema.parse(body);
+    const { ownerEmail, ownerPassword, ownerName, ...tenantData } = validated;
 
     // Check slug uniqueness
-    const existing = await findTenantBySlug(validated.slug);
+    const existing = await findTenantBySlug(tenantData.slug);
     if (existing) {
-      return apiError(`A store with slug "${validated.slug}" already exists`, 409);
+      return apiError(`A store with slug "${tenantData.slug}" already exists`, 409);
     }
 
-    const tenant = await insertTenant(validated as any);
-    return apiCreated(tenant);
+    const tenant = await insertTenant(tenantData as unknown as NewTenant);
+
+    // If initial store owner credentials are provided, create the tenant owner account right away
+    let owner = null;
+    if (ownerEmail && ownerPassword) {
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.email, ownerEmail),
+      });
+
+      const finalOwnerName = ownerName || `${tenantData.name} Owner`;
+
+      if (existingUser) {
+        await db.update(users).set({
+          role: 'tenant_owner',
+          tenantId: tenant.id,
+          isActive: true,
+        }).where(eq(users.email, ownerEmail));
+        owner = { id: existingUser.id, email: ownerEmail, name: existingUser.name, role: 'tenant_owner', tenantId: tenant.id };
+      } else {
+        await auth.api.signUpEmail({
+          body: {
+            email: ownerEmail,
+            password: ownerPassword,
+            name: finalOwnerName,
+          },
+        });
+        await db.update(users).set({
+          role: 'tenant_owner',
+          tenantId: tenant.id,
+          isActive: true,
+        }).where(eq(users.email, ownerEmail));
+        owner = { email: ownerEmail, name: finalOwnerName, role: 'tenant_owner', tenantId: tenant.id };
+      }
+    }
+
+    return apiCreated({ ...tenant, owner });
   } catch (err) {
     if (err instanceof AuthError) return apiError(err.message, err.statusCode);
-    if ((err as any)?.name === 'ZodError') {
-      return apiError(`Validation failed: ${(err as any).errors?.[0]?.message}`, 422);
+    if (err instanceof ZodError) {
+      return apiError(`Validation failed: ${err.issues?.[0]?.message}`, 422);
     }
     console.error('[Create Tenant Error]', err);
     return apiError('Failed to create tenant', 500);
@@ -96,14 +115,14 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { tenantId, ...updates } = updateTenantSchema.parse(body);
 
-    const tenant = await updateTenant(tenantId, updates as any);
+    const tenant = await updateTenant(tenantId, updates as Partial<NewTenant>);
     if (!tenant) return apiError('Tenant not found', 404);
 
     return apiSuccess(tenant);
   } catch (err) {
     if (err instanceof AuthError) return apiError(err.message, err.statusCode);
-    if ((err as any)?.name === 'ZodError') {
-      return apiError(`Validation failed: ${(err as any).errors?.[0]?.message}`, 422);
+    if (err instanceof ZodError) {
+      return apiError(`Validation failed: ${err.issues?.[0]?.message}`, 422);
     }
     return apiError('Failed to update tenant', 500);
   }

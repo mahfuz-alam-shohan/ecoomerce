@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     return apiSuccess({
       themeConfig: tenant.themeConfig,
       storeConfig: tenant.storeConfig,
+      storefrontConfig: tenant.storefrontConfig,
     });
   } catch (err) {
     if (err instanceof AuthError) return apiError(err.message, err.statusCode);
@@ -50,6 +51,7 @@ export async function PUT(request: NextRequest) {
 
     if (body.themeConfig) updateData.themeConfig = body.themeConfig;
     if (body.storeConfig) updateData.storeConfig = body.storeConfig;
+    if (body.storefrontConfig) updateData.storefrontConfig = body.storefrontConfig;
 
     const [updated] = await db
       .update(tenants)
@@ -62,6 +64,7 @@ export async function PUT(request: NextRequest) {
     return apiSuccess({
       themeConfig: updated.themeConfig,
       storeConfig: updated.storeConfig,
+      storefrontConfig: updated.storefrontConfig,
     });
   } catch (err) {
     if (err instanceof AuthError) return apiError(err.message, err.statusCode);

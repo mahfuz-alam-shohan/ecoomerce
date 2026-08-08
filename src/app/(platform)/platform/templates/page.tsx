@@ -7,6 +7,8 @@ import { Layers } from 'lucide-react';
 /**
  * Template Registry Page — Lists all storefront templates from DB.
  */
+export const dynamic = 'force-dynamic';
+
 export default async function TemplatesPage() {
   const templates = await db
     .select()
@@ -26,7 +28,7 @@ export default async function TemplatesPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {templates.map((template) => {
-          const meta = template.metadata as any;
+          const meta = template.metadata;
           return (
             <Card key={template.id} className="border-border/50">
               <CardHeader>

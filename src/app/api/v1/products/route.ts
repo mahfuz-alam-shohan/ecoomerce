@@ -1,5 +1,5 @@
-
 import { NextRequest } from 'next/server';
+import { ZodError } from 'zod';
 import { requireRole, requireTenantAccess, AuthError } from '@/lib/auth/guards';
 import { findProductsByTenant, countProductsByTenant, insertProduct } from '@/modules/catalog/repositories';
 import { createProductValidator } from '@/modules/catalog/validators';
@@ -23,8 +23,11 @@ export async function GET(request: NextRequest) {
 
     await requireTenantAccess(tenantId);
 
+    const statusParam = searchParams.get('status');
+    const status = statusParam === 'active' || statusParam === 'draft' || statusParam === 'archived' ? statusParam : undefined;
+
     const products = await findProductsByTenant(tenantId, {
-      status: searchParams.get('status') || undefined,
+      status,
       search: searchParams.get('search') || undefined,
       limit: Number(searchParams.get('limit')) || 50,
       offset: Number(searchParams.get('offset')) || 0,
@@ -48,13 +51,13 @@ export async function POST(request: NextRequest) {
     await requireTenantAccess(body.tenantId);
 
     const validated = createProductValidator.parse(body);
-    const product = await insertProduct(validated as any);
+    const product = await insertProduct(validated);
 
     return apiCreated(product);
   } catch (err) {
     if (err instanceof AuthError) return apiError(err.message, err.statusCode);
-    if ((err as any)?.name === 'ZodError') {
-      return apiError(`Validation failed: ${(err as any).errors?.[0]?.message}`, 422);
+    if (err instanceof ZodError) {
+      return apiError(`Validation failed: ${err.issues?.[0]?.message}`, 422);
     }
     return apiError('Failed to create product', 500);
   }

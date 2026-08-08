@@ -59,7 +59,7 @@ export function SignUpForm() {
         description: 'You can now sign in with your credentials.',
       });
 
-      router.push('/sign-in');
+      window.location.href = '/sign-in';
     } catch (err) {
       toast.error('Registration failed', {
         description: 'An unexpected error occurred. Please try again.',

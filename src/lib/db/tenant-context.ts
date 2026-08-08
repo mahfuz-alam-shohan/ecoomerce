@@ -1,4 +1,4 @@
-import { eq, SQL } from 'drizzle-orm';
+import { eq, SQL, type AnyColumn } from 'drizzle-orm';
 import { db } from './index';
 import { tenants } from './schemas/tenants.schema';
 
@@ -18,11 +18,11 @@ export interface TenantContext {
  * Scopes a Drizzle query condition to the active tenant ID.
  * Example usage: db.select().from(products).where(and(eq(products.status, 'active'), withTenant(tenantId, products.tenantId)))
  */
-export function withTenant<TColumn extends { name: string }>(
+export function withTenant(
   tenantId: string,
-  tenantIdColumn: TColumn
+  tenantIdColumn: AnyColumn
 ): SQL {
-  return eq(tenantIdColumn as any, tenantId);
+  return eq(tenantIdColumn, tenantId);
 }
 
 /**

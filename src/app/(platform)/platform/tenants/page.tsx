@@ -19,6 +19,8 @@ import { CreateTenantModal } from '@/components/features/platform/create-tenant-
  * Tenants Management Page — Lists all tenants + Add Store button.
  * Super Admin only (enforced by platform layout).
  */
+export const dynamic = 'force-dynamic';
+
 export default async function TenantsPage() {
   const tenantList = await db.query.tenants.findMany({
     orderBy: [desc(tenants.createdAt)],
@@ -67,8 +69,8 @@ export default async function TenantsPage() {
             </TableHeader>
             <TableBody>
               {tenantList.map((tenant) => {
-                const theme = tenant.themeConfig as any;
-                const store = tenant.storeConfig as any;
+                const theme = tenant.themeConfig;
+                const store = tenant.storeConfig;
                 return (
                   <TableRow key={tenant.id}>
                     <TableCell className="font-medium">{tenant.name}</TableCell>

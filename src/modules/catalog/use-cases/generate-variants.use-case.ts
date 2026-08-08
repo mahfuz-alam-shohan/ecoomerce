@@ -1,3 +1,4 @@
+import { db } from '@/lib/db';
 import { variantMatrixValidator } from '../validators';
 import { insertVariantsBatch, deleteVariantsByProduct } from '../repositories';
 import type { GenerateVariantsInput, CreateVariantInput } from '../types';
@@ -10,6 +11,7 @@ import type { GenerateVariantsInput, CreateVariantInput } from '../types';
  *   - Red / S, Red / M, Blue / S, Blue / M
  *
  * Each variant gets a unique auto-generated SKU, the base price, and base stock quantity.
+ * All changes run atomically in a database transaction to prevent leaving products with zero variants on error.
  */
 export async function generateVariants(input: GenerateVariantsInput) {
   // Step 1: Validate
@@ -37,11 +39,11 @@ export async function generateVariants(input: GenerateVariantsInput) {
     };
   });
 
-  // Step 3: Clear existing variants and insert new batch
-  await deleteVariantsByProduct(validated.productId);
-  const created = await insertVariantsBatch(variantInputs);
-
-  return created;
+  // Step 3: Clear existing variants and insert new batch atomically
+  return await db.transaction(async () => {
+    await deleteVariantsByProduct(validated.productId);
+    return await insertVariantsBatch(variantInputs);
+  });
 }
 
 /**

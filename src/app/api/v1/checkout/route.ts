@@ -1,5 +1,6 @@
 
 import { NextRequest } from 'next/server';
+import { ZodError } from 'zod';
 import { placeOrder } from '@/modules/checkout/use-cases';
 import { apiCreated, apiError } from '@/lib/utils';
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     return apiCreated(result);
   } catch (err) {
-    const message = (err as Error).message;
+    const message = err instanceof Error ? err.message : 'Unknown error';
 
     // Inventory errors (stock unavailable, lock contention)
     if (message.includes('Insufficient stock') || message.includes('currently being purchased')) {
@@ -45,8 +46,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validation errors
-    if ((err as any)?.name === 'ZodError') {
-      return apiError(`Validation failed: ${(err as any).errors?.[0]?.message}`, 422);
+    if (err instanceof ZodError) {
+      return apiError(`Validation failed: ${err.issues?.[0]?.message}`, 422);
     }
 
     console.error('[Checkout Error]', err);

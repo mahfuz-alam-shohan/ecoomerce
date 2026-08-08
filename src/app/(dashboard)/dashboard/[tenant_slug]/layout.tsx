@@ -3,10 +3,11 @@ import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { tenants } from '@/lib/db/schemas';
-import { requireSession } from '@/lib/auth/guards';
+import { getSession } from '@/lib/auth/guards';
 import { TenantProvider } from '@/lib/providers/tenant-provider';
 import { DashboardSidebar } from '@/components/layout/dashboard-sidebar';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
+import { PageTransition } from '@/components/ui/page-transition';
 
 /**
  * Dashboard Layout — Real authentication + tenant resolution.
@@ -16,6 +17,8 @@ import { DashboardHeader } from '@/components/layout/dashboard-header';
  * 3. Verifies the user has access to this tenant
  * 4. Provides tenant + session context to all children
  */
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardLayout({
   children,
   params,
@@ -24,10 +27,8 @@ export default async function DashboardLayout({
   params: Promise<{ tenant_slug: string }>;
 }) {
   // 1. Require authenticated session
-  let session;
-  try {
-    session = await requireSession();
-  } catch {
+  const session = await getSession();
+  if (!session) {
     redirect('/sign-in');
   }
 
@@ -42,9 +43,9 @@ export default async function DashboardLayout({
   }
 
   // 3. Verify tenant access (super_admin can access any tenant)
-  const user = session.user as any;
+  const user = session.user;
   if (user.role !== 'super_admin' && user.tenantId !== tenant.id) {
-    redirect('/sign-in');
+    redirect('/');
   }
 
   // 4. Provide context to all children
@@ -72,8 +73,10 @@ export default async function DashboardLayout({
         <DashboardSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <DashboardHeader />
-          <main className="flex-1 overflow-y-auto p-6">
-            {children}
+          <main className="flex-1 overflow-y-auto p-6 flex flex-col">
+            <PageTransition>
+              {children}
+            </PageTransition>
           </main>
         </div>
       </div>

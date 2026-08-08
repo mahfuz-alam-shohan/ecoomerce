@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LogOut, User } from 'lucide-react';
 import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 /**
  * DashboardHeader — Top bar with breadcrumbs and user avatar dropdown.
@@ -42,19 +43,22 @@ export function DashboardHeader() {
     <header className="flex h-16 items-center justify-between border-b border-border/50 bg-background/80 px-6 backdrop-blur-md">
       <DashboardBreadcrumbs />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-accent">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium text-foreground hidden sm:inline-block">
-              {user.name}
-            </span>
-          </button>
-        </DropdownMenuTrigger>
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-accent">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-foreground hidden sm:inline-block">
+                {user.name}
+              </span>
+            </button>
+          </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
             <div className="flex flex-col space-y-1">
@@ -69,6 +73,7 @@ export function DashboardHeader() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </header>
   );
 }

@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth/server';
+import { auth, type Session } from '@/lib/auth/server';
 import { headers } from 'next/headers';
 import type { UserRole } from '@/lib/db/schemas';
 
@@ -10,15 +10,15 @@ import type { UserRole } from '@/lib/db/schemas';
  */
 
 /** Get the current authenticated session or null */
-export async function getSession() {
+export async function getSession(): Promise<Session | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  return session;
+  return session as Session | null;
 }
 
 /** Require an authenticated session — throws if not logged in */
-export async function requireSession() {
+export async function requireSession(): Promise<Session> {
   const session = await getSession();
   if (!session) {
     throw new AuthError('Authentication required', 401);
@@ -27,9 +27,9 @@ export async function requireSession() {
 }
 
 /** Require a specific role — throws if user doesn't have it */
-export async function requireRole(...allowedRoles: UserRole[]) {
+export async function requireRole(...allowedRoles: UserRole[]): Promise<Session> {
   const session = await requireSession();
-  const userRole = (session.user as any).role as UserRole;
+  const userRole = session.user.role;
 
   if (!allowedRoles.includes(userRole)) {
     throw new AuthError(
@@ -42,10 +42,10 @@ export async function requireRole(...allowedRoles: UserRole[]) {
 }
 
 /** Require tenant ownership — ensures user belongs to the specified tenant */
-export async function requireTenantAccess(tenantId: string) {
+export async function requireTenantAccess(tenantId: string): Promise<Session> {
   const session = await requireSession();
-  const userTenantId = (session.user as any).tenantId;
-  const userRole = (session.user as any).role as UserRole;
+  const userTenantId = session.user.tenantId;
+  const userRole = session.user.role;
 
   // Super admins can access any tenant
   if (userRole === 'super_admin') return session;

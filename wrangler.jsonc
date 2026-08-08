@@ -29,5 +29,12 @@
 			"binding": "R2",
 			"bucket_name": "ecom"
 		}
+	],
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "ca6b3335caef499e9bd757e88358996d",
+			"localConnectionString": "postgresql://postgres.ncuejfanotnwrzcnigmj:I%40m1m%40n%40rmy159020302@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+		}
 	]
 }

@@ -9,6 +9,8 @@ import { getSession } from '@/lib/auth/guards';
  * - Super admin → /platform
  * - Tenant owner → /dashboard/[their-tenant-slug]
  */
+export const dynamic = 'force-dynamic';
+
 export default async function RootPage() {
   const session = await getSession();
 
@@ -16,7 +18,7 @@ export default async function RootPage() {
     redirect('/sign-in');
   }
 
-  const user = session.user as any;
+  const user = session.user;
 
   if (user.role === 'super_admin') {
     redirect('/platform');

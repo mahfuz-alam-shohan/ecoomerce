@@ -1,11 +1,13 @@
 import type { ICacheLockProvider } from '@/lib/adapters/cache';
-import { findVariantById, updateVariantStock } from '@/modules/catalog/repositories';
+import { db } from '@/lib/db';
+import { variants } from '@/lib/db/schemas';
+import { eq, and, gte, sql } from 'drizzle-orm';
 
 /**
- * Reserve Inventory Use-Case
+ * Reserve Inventory Use-Case (Standalone / Single Item)
  *
  * Acquires a distributed lock on the variant SKU, verifies stock availability,
- * and atomically decrements the stock quantity.
+ * and atomically decrements the stock quantity via SQL `gte` guard.
  * Prevents double-selling during concurrent checkout (flash sales).
  */
 export async function reserveInventory(
@@ -21,18 +23,15 @@ export async function reserveInventory(
   }
 
   try {
-    const variant = await findVariantById(variantId);
+    const [updatedVariant] = await db
+      .update(variants)
+      .set({ stockQuantity: sql`${variants.stockQuantity} - ${quantity}` })
+      .where(and(eq(variants.id, variantId), gte(variants.stockQuantity, quantity)))
+      .returning();
 
-    if (!variant) {
-      throw new Error('Variant not found');
+    if (!updatedVariant) {
+      throw new Error(`Insufficient stock. The requested quantity is not available.`);
     }
-
-    if (variant.stockQuantity < quantity) {
-      throw new Error(`Insufficient stock. Only ${variant.stockQuantity} available.`);
-    }
-
-    // Atomically decrement stock
-    const updatedVariant = await updateVariantStock(variantId, variant.stockQuantity - quantity);
 
     return updatedVariant;
   } finally {

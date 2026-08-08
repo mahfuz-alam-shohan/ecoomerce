@@ -1,7 +1,6 @@
 import { eq, count, sum, desc } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { products, orders, tenants } from '@/lib/db/schemas';
-import { requireSession } from '@/lib/auth/guards';
 import { redirect } from 'next/navigation';
 import { OverviewKpiCards } from '@/components/features/dashboard/overview-kpi-cards';
 import { RecentOrdersTable } from '@/components/features/dashboard/recent-orders-table';
@@ -10,6 +9,8 @@ import { RecentOrdersTable } from '@/components/features/dashboard/recent-orders
  * Dashboard Overview — Real-time KPIs from the database.
  * Fetches total products, total orders, pending orders, and revenue.
  */
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardOverviewPage({
   params,
 }: {
@@ -68,7 +69,7 @@ export default async function DashboardOverviewPage({
         totalOrders={Number(orderStats?.total) ?? 0}
         pendingOrders={pendingCount}
         revenueInCents={Number(orderStats?.revenue) || 0}
-        currency={(tenant.storeConfig as any)?.currency || 'USD'}
+        currency={tenant.storeConfig.currency || 'USD'}
       />
 
       <div>

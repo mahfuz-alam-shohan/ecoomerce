@@ -14,11 +14,11 @@ export default async function AuthLayout({
 
   // If already authenticated, redirect to appropriate dashboard
   if (session) {
-    const role = (session.user as any).role;
+    const role = session.user.role;
     if (role === 'super_admin') {
       redirect('/platform');
     }
-    const tenantSlug = (session.user as any).tenantSlug;
+    const tenantSlug = session.user.tenantSlug;
     if (tenantSlug) {
       redirect(`/dashboard/${tenantSlug}`);
     }

@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-heading: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -126,8 +126,109 @@
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
+    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  }
+  button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+    transform: scale(0.975);
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  /* 1. Holographic Light Sweep Shimmer (for ultra-modern cards & tables) */
+  @keyframes holographic-sweep {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-holographic {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.12) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: holographic-sweep 2.2s infinite ease-in-out;
+  }
+  .dark .animate-holographic {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: holographic-sweep 2.2s infinite ease-in-out;
+  }
+
+  /* 2. Classic Shimmer Pulse */
+  @keyframes shimmer-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.995); }
+  }
+  .animate-shimmer {
+    animation: shimmer-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* 3. Quantum Double Ring Spin */
+  @keyframes quantum-spin-cw {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.06); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+  @keyframes quantum-spin-ccw {
+    0% { transform: rotate(360deg) scale(1); }
+    50% { transform: rotate(180deg) scale(0.94); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
+  .animate-quantum-cw {
+    animation: quantum-spin-cw 2.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  }
+  .animate-quantum-ccw {
+    animation: quantum-spin-ccw 3s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  }
+
+  /* 4. Wave Equalizer Bounce */
+  @keyframes wave-bounce {
+    0%, 100% { transform: scaleY(0.35); opacity: 0.6; }
+    50% { transform: scaleY(1.15); opacity: 1; }
+  }
+  .animate-wave-bar {
+    animation: wave-bounce 1s infinite ease-in-out;
+  }
+
+  /* 5. Concentric Orb Ripple / Radar Ring */
+  @keyframes radar-ripple {
+    0% { transform: scale(0.8); opacity: 0.9; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+  .animate-radar-ring {
+    animation: radar-ripple 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+  }
+
+  /* 6. Stagger Pop Entrance for Grid Items */
+  @keyframes stagger-pop {
+    0% { opacity: 0; transform: translateY(12px) scale(0.92); }
+    70% { opacity: 1; transform: translateY(-2px) scale(1.02); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .animate-stagger {
+    animation: stagger-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* Gentle Card / Row hover lift */
+  .hover-card-lift {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  }
+  .hover-card-lift:hover {
+    transform: translateY(-2px);
+    @apply shadow-lg border-primary/30;
+  }
+
+  /* Micro glow effect on interactive elements */
+  .hover-glow:hover {
+    box-shadow: 0 0 16px -3px var(--primary);
   }
 }

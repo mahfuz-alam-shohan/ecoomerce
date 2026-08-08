@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/lib/providers/tenant-provider';
+import { useNavigationState } from '@/components/providers/navigation-provider';
+import { QuantumSpinner } from '@/components/ui/loading-motions';
 import {
   LayoutDashboard,
   Package,
@@ -11,25 +13,28 @@ import {
   ShoppingCart,
   Settings,
   Store,
+  Sparkles,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 /**
- * DashboardSidebar — Main navigation for the tenant dashboard.
+ * DashboardSidebar — Main navigation for the tenant dashboard with instant 0ms click feedback.
  * Highlights active route. Shows tenant branding at top.
  */
 
 const navItems = [
   { label: 'Overview', icon: LayoutDashboard, href: '' },
-  { label: 'Products', icon: Package, href: '/catalog' },
+  { label: 'Products', icon: Package, href: '/products' },
   { label: 'Categories', icon: FolderTree, href: '/categories' },
   { label: 'Orders', icon: ShoppingCart, href: '/orders' },
+  { label: 'Storefront Content', icon: Sparkles, href: '/storefront-builder' },
   { label: 'Store Settings', icon: Settings, href: '/settings' },
 ];
 
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { tenant } = useTenant();
+  const { startNavigation, isNavigating, targetRoute } = useNavigationState();
   const basePath = `/dashboard/${tenant.slug}`;
 
   return (
@@ -56,19 +61,27 @@ export function DashboardSidebar() {
               ? pathname === basePath || pathname === `${basePath}/`
               : pathname.startsWith(fullPath);
 
+          const isClickingThis = isNavigating && targetRoute === fullPath;
+
           return (
             <Link
               key={item.label}
               href={fullPath}
+              onClick={() => startNavigation(fullPath)}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                isActive
+                'flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                isActive || isClickingThis
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                   : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
               )}
             >
-              <item.icon className="h-4 w-4" />
-              {item.label}
+              <div className="flex items-center gap-3">
+                <item.icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </div>
+              {isClickingThis && (
+                <QuantumSpinner size="sm" />
+              )}
             </Link>
           );
         })}
@@ -78,10 +91,16 @@ export function DashboardSidebar() {
       <div className="border-t border-border/50 p-3">
         <Link
           href="/platform"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200"
+          onClick={() => startNavigation('/platform')}
+          className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200"
         >
-          <LayoutDashboard className="h-4 w-4" />
-          Platform Admin
+          <div className="flex items-center gap-3">
+            <LayoutDashboard className="h-4 w-4" />
+            <span>Platform Admin</span>
+          </div>
+          {isNavigating && targetRoute === '/platform' && (
+            <QuantumSpinner size="sm" />
+          )}
         </Link>
       </div>
     </aside>

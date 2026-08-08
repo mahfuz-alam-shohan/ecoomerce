@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { authClient } from '@/lib/auth/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,6 @@ import {
 } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, LogIn } from 'lucide-react';
-import Link from 'next/link';
 
 /**
  * SignInForm — Real authentication form using Better-Auth.
@@ -49,18 +49,18 @@ export function SignInForm() {
 
       toast.success('Signed in successfully');
 
-      // Fetch session to determine redirect target
-      const session = await authClient.getSession();
-      const user = session?.data?.user as any;
+      // Use user from sign-in response immediately or fallback to session check
+      const sessionResponse = !result?.data?.user
+        ? await authClient.getSession().catch(() => null)
+        : null;
 
-      if (user?.role === 'super_admin') {
-        router.push('/platform');
-      } else {
-        // Fetch the user's tenant slug for redirect
-        router.push('/dashboard');
-      }
+      const user = result?.data?.user || sessionResponse?.data?.user;
+      const role = user?.role;
 
-      router.refresh();
+      const targetUrl = role === 'super_admin' ? '/platform' : '/dashboard';
+      
+      // Perform full browser navigation so Cloudflare Edge middleware immediately sees the new session cookie
+      window.location.href = targetUrl;
     } catch (err) {
       toast.error('Sign in failed', {
         description: 'An unexpected error occurred. Please try again.',

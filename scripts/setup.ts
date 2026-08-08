@@ -84,13 +84,75 @@ async function setup() {
     console.log(`   ℹ️  Templates registry already populated (${templatesCount.length} templates).`);
   }
 
+  // ─── Step 3: Ensure Demo Tenant & Tenant Owner Account Exist ──────
+  console.log('\n🏬 Checking demo store & tenant owner account...');
+  const demoTenantSlug = 'shenzen-electronics';
+  const ownerEmail = 'owner@shenzen.com';
+  const ownerPassword = 'store123456';
+  const ownerName = 'Shenzen Store Manager';
+
+  let tenant = await db.query.tenants.findFirst({
+    where: eq(tenants.slug, demoTenantSlug),
+  });
+
+  if (!tenant) {
+    const [inserted] = await db
+      .insert(tenants)
+      .values({
+        name: 'Shenzen Electronics Hub',
+        slug: demoTenantSlug,
+        status: 'active',
+        storeConfig: {
+          currency: 'USD',
+          taxRatePercent: 5,
+          freeShippingThresholdCents: 10000,
+          features: { enableCod: true, enableBankTransfer: true, enableSandboxPay: true },
+        },
+      })
+      .returning();
+    tenant = inserted;
+    console.log('   ✅ Created demo store (`shenzen-electronics`)');
+  } else {
+    console.log('   ℹ️  Demo store (`shenzen-electronics`) already exists.');
+  }
+
+  const existingOwner = await db.query.users.findFirst({
+    where: eq(users.email, ownerEmail),
+  });
+
+  if (existingOwner) {
+    console.log('   ℹ️  Tenant owner already exists. Ensuring role `tenant_owner` and correct tenantId...');
+    await db.update(users).set({ role: 'tenant_owner', tenantId: tenant.id, isActive: true }).where(eq(users.email, ownerEmail));
+    console.log('   ✅ Updated existing owner account.');
+  } else {
+    console.log('   🔨 Creating new tenant owner account...');
+    try {
+      await auth.api.signUpEmail({
+        body: {
+          email: ownerEmail,
+          password: ownerPassword,
+          name: ownerName,
+        },
+      });
+      await db.update(users).set({ role: 'tenant_owner', tenantId: tenant.id, isActive: true }).where(eq(users.email, ownerEmail));
+      console.log('   ✅ Successfully created demo tenant owner account!');
+    } catch (err) {
+      console.error('   ❌ Error creating tenant owner:', err);
+    }
+  }
+
   console.log('\n=============================================');
   console.log('🎉 PLATFORM SETUP COMPLETE!');
   console.log('=============================================');
-  console.log('📋 Admin Login Credentials:');
+  console.log('📋 Admin Login Credentials (`super_admin` -> /platform):');
   console.log(`   Email:    ${adminEmail}`);
   console.log(`   Password: ${adminPassword}`);
   console.log('   Role:     super_admin');
+  console.log('---------------------------------------------');
+  console.log('🏬 Demo Store Owner Credentials (`tenant_owner` -> /dashboard/shenzen-electronics):');
+  console.log(`   Email:    ${ownerEmail}`);
+  console.log(`   Password: ${ownerPassword}`);
+  console.log('   Role:     tenant_owner');
   console.log('\n🌐 Open your browser at: http://localhost:3000/sign-in');
   console.log('=============================================\n');
   process.exit(0);

@@ -1,6 +1,6 @@
 import { eq, and, ilike, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { products } from '@/lib/db/schemas';
+import { products, type ProductStatus } from '@/lib/db/schemas';
 import { withTenant } from '@/lib/db/tenant-context';
 import type { CreateProductInput, UpdateProductInput } from '../types';
 
@@ -11,12 +11,12 @@ import type { CreateProductInput, UpdateProductInput } from '../types';
 
 export async function findProductsByTenant(
   tenantId: string,
-  options?: { status?: string; search?: string; limit?: number; offset?: number }
+  options?: { status?: ProductStatus; search?: string; limit?: number; offset?: number }
 ) {
   const conditions = [withTenant(tenantId, products.tenantId)];
 
   if (options?.status) {
-    conditions.push(eq(products.status, options.status as any));
+    conditions.push(eq(products.status, options.status));
   }
   if (options?.search) {
     conditions.push(ilike(products.title, `%${options.search}%`));

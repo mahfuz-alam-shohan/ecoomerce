@@ -1,7 +1,8 @@
+import { cache } from 'react';
 import { findTenantBySlug, findTenantByCustomDomain } from '../repositories';
 
 /**
- * Resolve Tenant By Host Use-Case
+ * Resolve Tenant By Host Use-Case (Request-Scoped Deduplicated via `cache()`)
  *
  * Determines which tenant a request belongs to based on the incoming hostname.
  *
@@ -11,9 +12,10 @@ import { findTenantBySlug, findTenantByCustomDomain } from '../repositories';
  * 3. If no match, extract the first subdomain segment and look up by slug.
  * 4. Return tenant data or null if no tenant found.
  *
- * Called by Edge Middleware (middleware.ts) on every request.
+ * Wrapped with React `cache()` so that if `layout.tsx`, `Header`, and `Footer` all call
+ * this function in the same request, Drizzle only hits PostgreSQL once!
  */
-export async function resolveTenantByHost(host: string) {
+export const resolveTenantByHost = cache(async function resolveTenantByHost(host: string) {
   const cleanHost = host.replace(/:\d+$/, ''); // Strip port
 
   // 1. Try custom domain lookup first (e.g., "www.myaura-store.com")
@@ -52,4 +54,4 @@ export async function resolveTenantByHost(host: string) {
   }
 
   return null;
-}
+});

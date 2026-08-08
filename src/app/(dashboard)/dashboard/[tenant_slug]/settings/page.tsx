@@ -34,8 +34,8 @@ export default async function SettingsPage({
 
       <StoreSettingsForm
         tenantId={tenant.id}
-        themeConfig={tenant.themeConfig as any}
-        storeConfig={tenant.storeConfig as any}
+        themeConfig={tenant.themeConfig}
+        storeConfig={tenant.storeConfig}
         templates={templates.map((t) => ({
           slug: t.slug,
           name: t.name,

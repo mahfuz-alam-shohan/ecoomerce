@@ -8,6 +8,8 @@ import { formatCurrency } from '@/lib/utils';
 /**
  * Platform Overview — Real system-wide metrics.
  */
+export const dynamic = 'force-dynamic';
+
 export default async function PlatformOverviewPage() {
   const [tenantCount] = await db.select({ total: count() }).from(tenants);
   const [orderStats] = await db
