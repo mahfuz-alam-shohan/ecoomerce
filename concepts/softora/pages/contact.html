@@ -1,0 +1,29 @@
+<!-- title: Contact · Softora
+desc: Book an Academy demo or start a custom software conversation with Softora. -->
+<section class="hero page-hero" style="min-height:auto;padding-bottom:20px">
+  <div class="hero-bg-grid"></div>
+  <div class="wrap">
+    <span class="label" data-reveal>Contact</span>
+    <h1 class="display" data-split style="max-width:12ch">Let's talk about <span class="serif">your</span> institution.</h1>
+    <p class="lead" data-reveal style="--d:500ms">A demo takes 45 minutes. A first conversation about a custom build takes 30. Either way, you'll leave with a clear next step.</p>
+  </div>
+</section>
+
+<section class="sec" style="padding-top:40px"><div class="wrap contact">
+  <div class="info" data-reveal>
+    <div><span class="mono">Email</span><b><a class="link" href="mailto:{{EMAIL}}">{{EMAIL}}</a></b><span>We reply within one working day.</span></div>
+    <div><span class="mono">Phone &amp; WhatsApp</span><b><a class="link" href="tel:{{PHONE_TEL}}">{{PHONE}}</a></b><span>Sunday to Thursday, 10 AM to 7 PM</span></div>
+    <div><span class="mono">Office</span><b>{{ADDRESS}}</b><span>Visits by appointment.</span></div>
+    <div class="map"><iframe title="Map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Dhaka%2C%20Bangladesh&z=11&output=embed"></iframe></div>
+  </div>
+  <form class="form" data-to="{{EMAIL}}" data-reveal style="--d:120ms">
+    <div class="field"><label for="name">Your name</label><input id="name" name="name" required autocomplete="name"></div>
+    <div class="field"><label for="org">Institution or company</label><input id="org" name="org" required autocomplete="organization"></div>
+    <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" required autocomplete="email"></div>
+    <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel"></div>
+    <div class="field full"><label for="topic">I'm interested in</label><select id="topic" name="topic"><option>An Academy demo</option><option>A custom software build</option><option>Support for an existing system</option><option>Something else</option></select></div>
+    <div class="field full"><label for="msg">Tell us a little about it</label><textarea id="msg" name="message" placeholder="Number of students, branches, what's not working today…"></textarea></div>
+    <button class="btn btn-ink" type="submit">Send message {{ARROW}}</button>
+    <span class="form-note">This opens your email app with the details filled in. Connect a form service to send directly.</span>
+  </form>
+</div></section>

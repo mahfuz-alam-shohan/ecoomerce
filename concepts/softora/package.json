@@ -1,0 +1,6 @@
+{
+  "name": "softora-site",
+  "private": true,
+  "scripts": { "build": "python3 build.py", "preview": "python3 build.py && wrangler dev", "deploy": "python3 build.py && wrangler deploy" },
+  "devDependencies": { "wrangler": "^4" }
+}
