@@ -51,3 +51,8 @@ next-env.d.ts
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# concept site build output
+concepts/*/dist
+concepts/*/node_modules
+concepts/*/.wrangler
