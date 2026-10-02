@@ -1,131 +1,162 @@
-// Three.js hero scene: a field of rounded tiles that assemble into a formation,
-// drift, follow the pointer, and disperse as the page scrolls.
+// Softora 3D mark: the "C and dot" logo built live in Three.js.
+// Variants: "logo" (ring + dot) and "orbit" (ring + orbiting module spheres).
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-const el = document.querySelector('[data-scene]');
-if (el) init(el);
-
-function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
-
-function formation(kind, rnd) {
-  const pts = [];
-  if (kind === 'grid') {
-    for (let x = -3; x <= 3; x++) for (let z = -2; z <= 2; z++) {
-      const h = 1 + Math.floor(rnd() * 3) * (rnd() > .55 ? 1 : 0);
-      for (let y = 0; y < h; y++) pts.push([x * 1.08, y * 1.08 - .9, z * 1.08]);
-    }
-  } else if (kind === 'stack') {
-    for (let l = 0; l < 4; l++) for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) {
-      if (l === 3 && (Math.abs(x) + Math.abs(z)) > 1) continue;
-      pts.push([x * 1.08 + (l % 2) * .54, l * 1.25 - 1.9, z * 1.08 - (l % 2) * .54]);
-    }
-  } else { // cluster
-    for (let x = -1.5; x <= 1.5; x++) for (let y = -1.5; y <= 1.5; y++) for (let z = -1.5; z <= 1.5; z++) {
-      const d = Math.abs(x) + Math.abs(y) + Math.abs(z);
-      if (d > 3.6 || (d > 2.4 && rnd() < .55)) continue;
-      pts.push([x * 1.08, y * 1.08, z * 1.08]);
-    }
-  }
-  return pts;
-}
+const host = document.querySelector('[data-scene]');
+if (host) { try { init(host); } catch (e) { console.warn('3D disabled', e); } }
 
 function init(host) {
+  const kind = host.dataset.scene || 'logo';
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const mobile = innerWidth < 900;
-  const kind = host.dataset.scene || 'cluster';
-  const rnd = seeded(kind.length * 7919 + 17);
-  const pts = formation(kind, rnd);
-  const N = pts.length;
+  const small = innerWidth < 768;
+  const fine = matchMedia('(pointer: fine)').matches;
 
-  let renderer;
-  try { renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' }); }
-  catch (e) { host.classList.add('no-gl'); return; }
-  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.75));
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
+  if (!renderer.getContext()) return;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, small ? 1.6 : 1.8));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(30, 1, .1, 100);
-  camera.position.set(7.5, 6, 9); camera.lookAt(0, -.2, 0);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+  camera.position.set(0, 0, 9);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xcfcbc0, 1.15));
-  const key = new THREE.DirectionalLight(0xffffff, 2.4); key.position.set(-6, 9, 5); scene.add(key);
-  const fill = new THREE.DirectionalLight(0xdfe6ff, .9); fill.position.set(8, 2, -6); scene.add(fill);
-  const rim = new THREE.DirectionalLight(0xffffff, .6); rim.position.set(0, -6, -8); scene.add(rim);
+  const key = new THREE.DirectionalLight(0xffffff, 1.4); key.position.set(-3, 4, 6); scene.add(key);
+  const pv = new THREE.PointLight(0x9a4dff, 40, 18); pv.position.set(3.5, -2.5, 3); scene.add(pv);
+  const pb = new THREE.PointLight(0x1f9bff, 40, 18); pb.position.set(-3.5, 3, 2.5); scene.add(pb);
 
-  const geo = new RoundedBoxGeometry(.92, .92, .92, 4, .12);
-  const mat = new THREE.MeshPhysicalMaterial({ roughness: .38, metalness: .04, clearcoat: .55, clearcoatRoughness: .35, vertexColors: false });
-  const mesh = new THREE.InstancedMesh(geo, mat, N);
-  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  const group = new THREE.Group(); group.add(mesh); scene.add(group);
-  const baseScale = kind === 'grid' ? .8 : kind === 'stack' ? .95 : 1; group.scale.setScalar(baseScale);
-  if (kind === 'grid') group.position.y = .35;
+  const root = new THREE.Group(); scene.add(root);
+  const logo = new THREE.Group(); root.add(logo);
 
-  const paper = new THREE.Color(0xf7f6f1), ink = new THREE.Color(0x15181d), blue = new THREE.Color(0x1e8bff), violet = new THREE.Color(0x8b3dff);
-  const dark = host.closest('.dark') != null;
-  const target = [], scatter = [], cur = [], phase = [], scl = [];
-  const dummy = new THREE.Object3D();
-  for (let i = 0; i < N; i++) {
-    const [x, y, z] = pts[i];
-    target.push(new THREE.Vector3(x, y, z));
-    const dir = new THREE.Vector3(x + (rnd() - .5), y + (rnd() - .5) * 2, z + (rnd() - .5)).normalize();
-    scatter.push(dir.multiplyScalar(6 + rnd() * 7));
-    cur.push(scatter[i].clone().multiplyScalar(1.4));
-    phase.push(rnd() * Math.PI * 2);
-    scl.push(0);
-    const r = rnd();
-    let c = dark ? ink : paper;
-    if (r > .86) c = blue.clone().lerp(violet, (x + z + 3.3) / 6.6); else if (r > .76) c = dark ? paper : ink;
-    mesh.setColorAt(i, c);
+  // geometry constants derived from the logo proportions
+  const R = 1.4, TUBE = 0.36, HALF = 0.66, ARC = Math.PI * 2 - HALF * 2;
+  const DOT_R = 0.5, DOT_X = 1.5;
+  const cBlue = new THREE.Color('#2a7dff'), cMid = new THREE.Color('#5b4cff'), cViolet = new THREE.Color('#9b3dff');
+  const span = 2 * (R + TUBE);
+  const colorAt = (x, y, out) => {
+    const t = THREE.MathUtils.clamp(0.5 - (x + y) / (span * 1.15), 0, 1);
+    return t < 0.5 ? out.copy(cBlue).lerp(cMid, t * 2) : out.copy(cMid).lerp(cViolet, (t - 0.5) * 2);
+  };
+  const paint = (geo, ox = 0, oy = 0) => {
+    const p = geo.attributes.position, c = new Float32Array(p.count * 3), tmp = new THREE.Color();
+    for (let i = 0; i < p.count; i++) { colorAt(p.getX(i) + ox, p.getY(i) + oy, tmp); c[i * 3] = tmp.r; c[i * 3 + 1] = tmp.g; c[i * 3 + 2] = tmp.b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  };
+  const mat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 0.75, sheen: 0.25, sheenColor: new THREE.Color('#b9a6ff') });
+
+  // ring (rebuilt while it draws in)
+  const ring = new THREE.Mesh(new THREE.BufferGeometry(), mat); logo.add(ring);
+  const capGeo = new THREE.SphereGeometry(TUBE, 40, 28);
+  const capMats = [mat.clone(), mat.clone()]; capMats.forEach(m => { m.vertexColors = false; });
+  const caps = capMats.map(m => { const s = new THREE.Mesh(capGeo, m); logo.add(s); return s; });
+  let builtFrac = -1;
+  const buildRing = frac => {
+    frac = Math.max(0.002, Math.min(1, frac));
+    if (Math.abs(frac - builtFrac) < 0.004) return; builtFrac = frac;
+    const g = new THREE.TorusGeometry(R, TUBE, small ? 32 : 44, Math.max(8, Math.round((small ? 140 : 200) * frac)), ARC * frac);
+    g.rotateZ(HALF); paint(g);
+    ring.geometry.dispose(); ring.geometry = g;
+    const a0 = HALF, a1 = HALF + ARC * frac, tmp = new THREE.Color();
+    [a0, a1].forEach((a, i) => { const x = Math.cos(a) * R, y = Math.sin(a) * R; caps[i].position.set(x, y, 0); capMats[i].color.copy(colorAt(x, y, tmp)); });
+  };
+
+  // dot or orbiters
+  const dotGeo = new THREE.SphereGeometry(DOT_R, 64, 48); paint(dotGeo, DOT_X, 0);
+  const dot = new THREE.Mesh(dotGeo, mat); dot.position.set(DOT_X, 0, 0); logo.add(dot);
+  const orbiters = [];
+  if (kind === 'orbit') {
+    dot.visible = false;
+    const oGeo = new THREE.SphereGeometry(0.17, 32, 24);
+    for (let i = 0; i < 7; i++) {
+      const g = oGeo.clone(); const c = new THREE.Color(); colorAt(Math.cos(i) * 2, Math.sin(i) * 2, c);
+      const m = new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.25, clearcoat: 1, metalness: 0.1 });
+      const s = new THREE.Mesh(g, m); root.add(s);
+      orbiters.push({ s, r: 2.25 + (i % 3) * 0.32, speed: 0.35 + i * 0.06, tilt: (i - 3) * 0.32, phase: i * 0.9 });
+    }
+    const ringOrbit = new THREE.Mesh(new THREE.TorusGeometry(2.55, 0.006, 6, 180), new THREE.MeshBasicMaterial({ color: 0x6f73ff, transparent: true, opacity: 0.35 }));
+    ringOrbit.rotation.x = 1.25; root.add(ringOrbit);
   }
-  mesh.instanceColor.needsUpdate = true;
 
-  // state
-  let w = 1, h = 1, t0 = performance.now(), scrollP = 0, px = 0, py = 0, tx = 0, ty = 0, visible = true, raf = 0;
-  const assembleDur = reduce ? 1 : 1900;
+  // particles
+  const N = small ? 220 : 520;
+  const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), tmpc = new THREE.Color();
+  for (let i = 0; i < N; i++) {
+    const u = Math.random(), v = Math.random(), th = u * Math.PI * 2, ph = Math.acos(2 * v - 1), r = 2.6 + Math.random() * 2.2;
+    const x = r * Math.sin(ph) * Math.cos(th), y = r * Math.sin(ph) * Math.sin(th) * 0.8, z = r * Math.cos(ph) * 0.6 - 0.5;
+    pos.set([x, y, z], i * 3); colorAt(x * 0.6, y * 0.6, tmpc); col.set([tmpc.r, tmpc.g, tmpc.b], i * 3);
+  }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64; const cx = cv.getContext('2d');
+  const grd = cx.createRadialGradient(32, 32, 0, 32, 32, 32); grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.35, 'rgba(255,255,255,.6)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  cx.fillStyle = grd; cx.fillRect(0, 0, 64, 64);
+  const pmat = new THREE.PointsMaterial({ size: small ? 0.07 : 0.06, map: new THREE.CanvasTexture(cv), vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false });
+  const points = new THREE.Points(pg, pmat); root.add(points);
 
-  const resize = () => { const r = host.getBoundingClientRect(); w = Math.max(1, r.width); h = Math.max(1, r.height); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
-  resize(); addEventListener('resize', resize);
-  new ResizeObserver(resize).observe(host);
+  // sizing
+  let w = 1, h = 1;
+  const resize = () => {
+    const r = host.getBoundingClientRect(); w = Math.max(1, r.width); h = Math.max(1, r.height);
+    renderer.setSize(w, h, false); camera.aspect = w / h;
+    const need = kind === 'orbit' ? 3.1 : 2.45;
+    camera.position.z = Math.max(9, need / (Math.tan(THREE.MathUtils.degToRad(16)) * camera.aspect));
+    camera.updateProjectionMatrix();
+  };
+  resize(); new ResizeObserver(resize).observe(host);
+  logo.position.x = kind === 'orbit' ? 0.15 : -0.12;
 
-  if (!mobile) addEventListener('pointermove', e => { tx = (e.clientX / innerWidth - .5) * 2; ty = (e.clientY / innerHeight - .5) * 2; }, { passive: true });
-  addEventListener('scroll', () => { const r = host.getBoundingClientRect(); scrollP = Math.min(1, Math.max(0, -r.top / (r.height * .9))); }, { passive: true });
-  new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible && !raf) loop(); }, { rootMargin: '120px' }).observe(host);
+  // input: desktop pointer tilt, touch drag (horizontal) with inertia
+  let tx = 0, ty = 0, px = 0, py = 0, drag = 0, vel = 0, down = false, lastX = 0;
+  if (fine) addEventListener('pointermove', e => { tx = (e.clientX / innerWidth - 0.5) * 2; ty = (e.clientY / innerHeight - 0.5) * 2; }, { passive: true });
+  const cvEl = renderer.domElement;
+  cvEl.addEventListener('pointerdown', e => { down = true; lastX = e.clientX; vel = 0; cvEl.setPointerCapture?.(e.pointerId); });
+  cvEl.addEventListener('pointermove', e => { if (!down) return; const dx = e.clientX - lastX; lastX = e.clientX; vel = dx * 0.012; drag += vel; });
+  const up = () => { down = false; }; cvEl.addEventListener('pointerup', up); cvEl.addEventListener('pointercancel', up);
+
+  let scrollP = 0;
+  addEventListener('scroll', () => { const r = host.getBoundingClientRect(); scrollP = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height))); }, { passive: true });
+
+  let visible = true, raf = 0;
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible && !raf) loop(); }, { rootMargin: '100px' }).observe(host);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && visible && !raf) loop(); });
 
-  const ease = x => 1 - Math.pow(1 - x, 4);
-  const v = new THREE.Vector3();
+  const t0 = performance.now();
+  const easeOut = x => 1 - Math.pow(1 - x, 3);
+  const easeBack = x => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
 
   function frame(now) {
     const t = (now - t0) / 1000;
-    const a = ease(Math.min(1, (now - t0) / assembleDur));
-    px += (tx - px) * .05; py += (ty - py) * .05;
-    const disperse = reduce ? 0 : scrollP;
-    for (let i = 0; i < N; i++) {
-      const stag = Math.min(1, Math.max(0, (a * 1.25) - (i / N) * .25));
-      v.copy(scatter[i]).lerp(target[i], ease(stag));
-      if (disperse > 0) { v.lerp(scatter[i], disperse * disperse); }
-      if (!reduce) { v.y += Math.sin(t * .9 + phase[i]) * .06 * (1 - disperse); }
-      cur[i].lerp(v, .18);
-      scl[i] += ((stag > 0 ? 1 : 0) * (1 - disperse * .6) - scl[i]) * .12;
-      dummy.position.copy(cur[i]);
-      dummy.rotation.set(disperse * phase[i] * .4, disperse * phase[i] * .3, 0);
-      dummy.scale.setScalar(Math.max(.001, scl[i]));
-      dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    group.rotation.y = (reduce ? 0 : t * .12) + px * .35;
-    group.rotation.x = py * .12;
-    group.position.y = (kind === 'grid' ? .35 : 0) + Math.sin(t * .6) * .08 - scrollP * 1.2;
+    const draw = reduce ? 1 : easeOut(Math.min(1, t / 1.5));
+    buildRing(draw);
+    const dIn = reduce ? 1 : Math.min(1, Math.max(0, (t - 1.05) / 0.8));
+    dot.scale.setScalar(Math.max(0.001, easeBack(dIn)));
+    dot.position.y = (1 - easeOut(dIn)) * 1.4 + (reduce ? 0 : Math.sin(t * 1.6) * 0.04 * dIn);
+
+    orbiters.forEach((o, i) => {
+      const a = (reduce ? 0 : t) * o.speed + o.phase, k = Math.min(1, Math.max(0, (t - 0.6 - i * 0.12) / 0.8));
+      o.s.position.set(Math.cos(a) * o.r, Math.sin(a) * o.r * Math.sin(o.tilt) * 0.6 + Math.sin(a * 0.5) * 0.2, Math.sin(a) * o.r * Math.cos(o.tilt) * 0.6);
+      o.s.scale.setScalar(Math.max(0.001, easeBack(k)));
+    });
+
+    if (!down) { vel *= 0.94; drag += vel; drag *= 0.985; }
+    px += (tx - px) * 0.05; py += (ty - py) * 0.05;
+    const idle = reduce ? 0 : t;
+    logo.rotation.y = Math.sin(idle * 0.45) * 0.38 + px * 0.45 + drag;
+    logo.rotation.x = Math.sin(idle * 0.35) * 0.12 + py * 0.25;
+    root.rotation.z = scrollP * 0.5;
+    root.position.y = Math.sin(idle * 0.8) * 0.06 + scrollP * 1.4;
+    points.rotation.y = idle * 0.03 + px * 0.1; points.rotation.x = idle * 0.015;
     renderer.render(scene, camera);
   }
   function loop() {
     if (!visible || document.hidden) { raf = 0; return; }
-    raf = requestAnimationFrame(loop);
-    frame(performance.now());
+    raf = requestAnimationFrame(loop); frame(performance.now());
   }
-  if (reduce) { frame(t0 + 10); } else loop();
-  host.classList.add('gl-ready');
+  frame(t0 + (reduce ? 5000 : 0));
+  host.classList.add('gl');
+  if (!reduce) loop();
 }
